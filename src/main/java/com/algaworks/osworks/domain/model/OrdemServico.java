@@ -1,18 +1,14 @@
 package com.algaworks.osworks.domain.model;
 
-import com.algaworks.osworks.domain.ValidationGroups;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.algaworks.osworks.api.model.Comentario;
+import com.algaworks.osworks.domain.exception.NegocioException;
 
 import javax.persistence.*;
-import javax.validation.Valid;
-import javax.validation.Validation;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.groups.ConvertGroup;
-import javax.validation.groups.Default;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -22,26 +18,18 @@ public class OrdemServico {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
 
-    @Valid
-    @ConvertGroup(from = Default.class, to = ValidationGroups.ClienteId.class)
-    @NotNull
     @ManyToOne
     private Cliente cliente;
-
-    @NotBlank
     private String descricao;
-    @NotNull
     private BigDecimal preco;
 
     @Enumerated(EnumType.STRING)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private StatusOrdemServico status;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private OffsetDateTime dataAbertura;
+    private OffsetDateTime dataFinalizacao;
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private LocalDateTime dataFinalizacao;
+    @OneToMany(mappedBy = "ordemServico")
+    private List<Comentario> comentarios = new ArrayList<>();
 
     public Long getId() {
         return Id;
@@ -91,12 +79,20 @@ public class OrdemServico {
         this.dataAbertura = dataAbertura;
     }
 
-    public LocalDateTime getDataFinalizacao() {
+    public OffsetDateTime getDataFinalizacao() {
         return dataFinalizacao;
     }
 
-    public void setDataFinalizacao(LocalDateTime dataFinalizacao) {
+    public void setDataFinalizacao(OffsetDateTime dataFinalizacao) {
         this.dataFinalizacao = dataFinalizacao;
+    }
+
+    public List<Comentario> getComentarios() {
+        return comentarios;
+    }
+
+    public void setComentarios(List<Comentario> comentarios) {
+        this.comentarios = comentarios;
     }
 
     @Override
@@ -110,5 +106,17 @@ public class OrdemServico {
     @Override
     public int hashCode() {
         return Objects.hash(Id);
+    }
+
+    public boolean NaopodeSerFinalizada(){
+        return !StatusOrdemServico.ABERTA.equals(getStatus());
+    }
+
+    public void finalizar() {
+        if (NaopodeSerFinalizada()){
+            throw new NegocioException("Ordem de serviço não pode ser finalizada!");
+        }
+        setStatus(StatusOrdemServico.FINALIZADA);
+        setDataFinalizacao(OffsetDateTime.now());
     }
 }
